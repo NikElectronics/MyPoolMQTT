@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Температура воды в бассейне</title>
+    <style>
+        body { 
+            font-family: Arial; 
+            text-align: center; 
+            padding: 50px;
+            background: linear-gradient(135deg, #00c9ff 0%, #92fe9d 100%);
+            color: #003366;
+            min-height: 100vh;
+            margin: 0;
+            transition: background 0.5s ease;
+        }
+        .container {
+            background: rgba(255,255,255,0.3);
+            padding: 40px;
+            border-radius: 20px;
+            max-width: 400px;
+            margin: 0 auto;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 105, 148, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        .pool-icon {
+            font-size: 60px;
+            margin-bottom: 20px;
+            display: block;
+        }
+        .temp {
+            font-size: 80px;
+            font-weight: bold;
+            margin: 20px 0;
+            color: #003366;
+        }
+        .unit {
+            font-size: 30px;
+            vertical-align: top;
+        }
+        .status {
+            margin: 20px 0;
+            padding: 10px;
+            border-radius: 5px;
+            background: rgba(255,255,255,0.5);
+            font-weight: bold;
+        }
+        .pump-status {
+            background: rgba(255,255,255,0.5);
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .pump-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        .pump-indicator {
+            display: inline-block;
+            padding: 15px 30px;
+            border-radius: 50px;
+            font-weight: bold;
+            font-size: 20px;
+            margin: 10px 0;
+            transition: all 0.3s ease;
+        }
+        .pump-on {
+            background: #4CAF50;
+            color: white;
+            box-shadow: 0 0 20px rgba(76, 175, 80, 0.5);
+        }
+        .pump-off {
+            background: #f44336;
+            color: white;
+            box-shadow: 0 0 20px rgba(244, 67, 54, 0.5);
+        }
+        .pump-waiting {
+            background: #ff9800;
+            color: white;
+        }
+        .pump-icon {
+            font-size: 40px;
+            margin-bottom: 10px;
+        }
+        .pump-details {
+            margin-top: 15px;
+            font-size: 14px;
+            color: #006699;
+        }
+        button {
+            background: #4fc3f7;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 10px;
+            color: white;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+        button:hover {
+            background: #03a9f4;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        #time, #lastPumpUpdate {
+            color: #003366;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+        .pool-title {
+            font-size: 24px;
+            margin-bottom: 5px;
+            color: #003366;
+            font-weight: bold;
+        }
+        .pool-subtitle {
+            font-size: 16px;
+            margin-bottom: 20px;
+            color: #006699;
+        }
+        .broker-info {
+            font-size: 12px;
+            color: #006699;
+            margin-top: 20px;
+            opacity: 0.7;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <span class="pool-icon">🏊‍♂️</span>
+        <div class="pool-title">Бассейн ISMAIL</div>
+        <div class="pool-subtitle">Мониторинг воды</div>
+        
+        <div class="temp">
+            <span id="tempValue">--</span><span class="unit">°C</span>
+        </div>
+        <div id="time">---</div>
+        
+        <!-- Блок статуса насоса -->
+        <div class="pump-status">
+            <div class="pump-title">
+                <span>⚙️ Насос фильтрации</span>
+            </div>
+            <div id="pumpIcon" class="pump-icon">⏳</div>
+            <div id="pumpIndicator" class="pump-indicator pump-waiting">
+                Загрузка...
+            </div>
+            <div class="pump-details" id="pumpDetails">
+                Получение данных о работе насоса...
+            </div>
+            <div id="lastPumpUpdate"></div>
+        </div>
+        
+        <div class="status" id="status">🟡 Подключение к Mosquitto...</div>
+        <button onclick="connectMQTT()">🔄 Переподключиться</button>
+        
+        <div class="broker-info">
+            Публичный брокер: test.mosquitto.org (WebSockets: 8081)<br>
+            Client: MyPoolISMAIL
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mqtt/5.0.0/mqtt.min.js"></script>
+    <script>
+        // Топики - используем те же что и в ESP32
+        const temp_topic = "pool/ismail/temperature";
+        const pump_topic = "pool/ismail/pump";
+        
+        let client = null;
+        let reconnectTimer = null;
+
+        function connectMQTT() {
+            document.getElementById('status').innerHTML = '🟡 Подключаемся к Mosquitto...';
+            
+            if (client) {
+                client.end(true);
+            }
+            
+            if (reconnectTimer) {
+                clearTimeout(reconnectTimer);
+            }
+            
+            const options = {
+                keepalive: 60,
+                clean: true,
+                reconnectPeriod: 5000,
+                connectTimeout: 30000,
+                clientId: 'web_' + Math.random().toString(16).substr(2, 8)
+            };
+            
+            client = mqtt.connect('wss://test.mosquitto.org:8081', options);
+            
+            client.on('connect', function() {
+                document.getElementById('status').innerHTML = '🟢 Подключено к Mosquitto';
+                
+                client.subscribe(temp_topic);
+                client.subscribe(pump_topic);
+                
+                console.log('Subscribed to topics');
+            });
+            
+            client.on('message', function(topic, message) {
+                const msgString = message.toString();
+                console.log('Received:', topic, msgString);
+                
+                if (topic === temp_topic) {
+                    const temp = parseFloat(msgString);
+                    if (!isNaN(temp)) {
+                        document.getElementById('tempValue').innerHTML = temp.toFixed(1);
+                        
+                        const now = new Date();
+                        document.getElementById('time').innerHTML = 
+                            'Обновлено: ' + now.toLocaleTimeString();
+                        
+                        // Меняем фон в зависимости от температуры
+                        if (temp > 28) {
+                            document.body.style.background = 'linear-gradient(135deg, #ff9a9e 0%, #fad0c4 100%)';
+                        } else if (temp > 24) {
+                            document.body.style.background = 'linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%)';
+                        } else if (temp > 20) {
+                            document.body.style.background = 'linear-gradient(135deg, #00c9ff 0%, #92fe9d 100%)';
+                        } else {
+                            document.body.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+                        }
+                    }
+                }
+                else if (topic === pump_topic) {
+                    updatePumpUI(msgString);
+                }
+            });
+            
+            client.on('error', function(error) {
+                console.log('MQTT Error:', error);
+                document.getElementById('status').innerHTML = '🔴 Ошибка: ' + error.message;
+                updatePumpUI('ERROR');
+            });
+            
+            client.on('offline', function() {
+                document.getElementById('status').innerHTML = '🔴 Отключено от Mosquitto';
+                updatePumpUI('OFFLINE');
+            });
+            
+            client.on('close', function() {
+                console.log('MQTT connection closed');
+                reconnectTimer = setTimeout(connectMQTT, 10000);
+            });
+        }
+
+        function updatePumpUI(status) {
+            const pumpIndicator = document.getElementById('pumpIndicator');
+            const pumpIcon = document.getElementById('pumpIcon');
+            const pumpDetails = document.getElementById('pumpDetails');
+            const lastUpdate = document.getElementById('lastPumpUpdate');
+            
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString();
+            
+            if (status === 'ON') {
+                pumpIndicator.className = 'pump-indicator pump-on';
+                pumpIndicator.innerHTML = '✅ НАСОС РАБОТАЕТ';
+                pumpIcon.innerHTML = '⚙️💨';
+                pumpDetails.innerHTML = 'Фильтрация воды активна';
+                lastUpdate.innerHTML = `Последние данные: ${timeStr}`;
+            } else if (status === 'OFF') {
+                pumpIndicator.className = 'pump-indicator pump-off';
+                pumpIndicator.innerHTML = '⏸️ НАСОС ВЫКЛЮЧЕН';
+                pumpIcon.innerHTML = '⚙️💤';
+                pumpDetails.innerHTML = 'Фильтрация не активна';
+                lastUpdate.innerHTML = `Последние данные: ${timeStr}`;
+            } else if (status === 'ERROR') {
+                pumpIndicator.className = 'pump-indicator pump-waiting';
+                pumpIndicator.innerHTML = '⚠️ ОШИБКА';
+                pumpIcon.innerHTML = '⚙️❌';
+                pumpDetails.innerHTML = 'Ошибка датчика';
+                lastUpdate.innerHTML = `Ошибка: ${timeStr}`;
+            } else if (status === 'OFFLINE') {
+                pumpIndicator.className = 'pump-indicator pump-waiting';
+                pumpIndicator.innerHTML = '📡 НЕТ СВЯЗИ';
+                pumpIcon.innerHTML = '⚙️📡';
+                pumpDetails.innerHTML = 'ESP32 не в сети';
+                lastUpdate.innerHTML = `Потеря связи: ${timeStr}`;
+            } else {
+                pumpIndicator.className = 'pump-indicator pump-waiting';
+                pumpIndicator.innerHTML = '⏳ ОЖИДАНИЕ';
+                pumpIcon.innerHTML = '⚙️⏳';
+                pumpDetails.innerHTML = 'Ожидание данных...';
+            }
+        }
+
+        window.onload = connectMQTT;
+        
+        setInterval(() => {
+            if (!client || !client.connected) {
+                updatePumpUI('OFFLINE');
+            }
+        }, 5000);
+    </script>
+</body>
+</html>
