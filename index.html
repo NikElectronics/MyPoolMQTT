@@ -59,15 +59,6 @@
             vertical-align: top;
         }
         
-        .status {
-            margin: 15px 0;
-            padding: 8px;
-            border-radius: 5px;
-            background: rgba(255,255,255,0.5);
-            font-weight: bold;
-            font-size: 14px;
-        }
-        
         .pump-status {
             background: rgba(255,255,255,0.5);
             border-radius: 15px;
@@ -435,8 +426,16 @@
             <div id="lastPumpUpdate"></div>
         </div>
         
-        <div class="status" id="status">🟡 Загрузка...</div>
-        <div id="currentBroker" class="current-broker">Загрузка...</div>
+        <div class="pump-status">
+            <div class="pump-title">
+                <span>🔥 Нагрев воды</span>
+            </div>
+            <div id="heaterIcon" class="pump-icon">⏳</div>
+            <div id="heaterIndicator" class="pump-indicator pump-waiting">
+                Загрузка...
+            </div>
+            <div id="lastHeaterUpdate"></div>
+        </div>
         
         <button onclick="connectMQTT()">🔄 Переподключиться</button>
     </div>
@@ -488,6 +487,11 @@
             </div>
             
             <div class="settings-group">
+                <label>🔥 Топик нагрева:</label>
+                <input type="text" id="heaterTopic" placeholder="pool/ismail/heater">
+            </div>
+            
+            <div class="settings-group">
                 <label>🆔 Client ID (опционально):</label>
                 <input type="text" id="clientId" placeholder="будет сгенерирован автоматически">
             </div>
@@ -499,6 +503,7 @@
                 <p><b>HiveMQ:</b> broker.hivemq.com:8000/mqtt (без логина)</p>
                 <p><b>WQTT.RU:</b> wqtt.ru:8084 (нужен логин/пароль)</p>
                 <p><b>Локальный:</b> 192.168.1.100:9001 (без логина)</p>
+                <p><b>Топики:</b> Температура: pool/ismail/temperature, Насос: pool/ismail/pump, Нагрев: pool/ismail/heater</p>
                 <p><i>💾 Настройки сохраняются в браузере</i></p>
             </div>
             
@@ -521,6 +526,7 @@
             mqttPass: '',
             tempTopic: 'pool/ismail/temperature',
             pumpTopic: 'pool/ismail/pump',
+            heaterTopic: 'pool/ismail/heater',
             clientId: ''
         };
         
@@ -578,6 +584,10 @@
                 const saved = localStorage.getItem('poolSettingsAll');
                 if (saved) {
                     settings = JSON.parse(saved);
+                    // Обеспечиваем наличие всех необходимых параметров
+                    if (!settings.hasOwnProperty('heaterTopic')) {
+                        settings.heaterTopic = DEFAULT_SETTINGS.heaterTopic;
+                    }
                 }
             } catch (e) {
                 console.log('Error loading settings:', e);
@@ -609,6 +619,7 @@
                 mqttPass: document.getElementById('mqttPass').value.trim(),
                 tempTopic: document.getElementById('tempTopic').value.trim() || DEFAULT_SETTINGS.tempTopic,
                 pumpTopic: document.getElementById('pumpTopic').value.trim() || DEFAULT_SETTINGS.pumpTopic,
+                heaterTopic: document.getElementById('heaterTopic').value.trim() || DEFAULT_SETTINGS.heaterTopic,
                 clientId: document.getElementById('clientId').value.trim() || ''
             };
             
@@ -619,20 +630,13 @@
             updateUI();
             connectMQTT();
             
-            document.getElementById('status').innerHTML = '✅ Настройки сохранены';
             setTimeout(() => {
-                document.getElementById('status').innerHTML = client?.connected ? '🟢 Подключено' : '🟡 Готово';
+                // Обновление статуса больше не требуется
             }, 2000);
         }
 
         function updateUI() {
-            const protocol = settings.useTls ? 'wss://' : 'ws://';
-            const path = settings.brokerPath ? settings.brokerPath : '';
-            const auth = settings.mqttUser ? ` (${settings.mqttUser})` : '';
-            const displayUrl = `${protocol}${settings.brokerHost}:${settings.brokerPort}${path}${auth}`;
-            
-            document.getElementById('currentBroker').innerHTML = 
-                `Брокер: ${displayUrl}`;
+            // Обновление информации о брокере больше не требуется
         }
 
         function openSettings() {
@@ -644,6 +648,7 @@
             document.getElementById('mqttPass').value = settings.mqttPass;
             document.getElementById('tempTopic').value = settings.tempTopic;
             document.getElementById('pumpTopic').value = settings.pumpTopic;
+            document.getElementById('heaterTopic').value = settings.heaterTopic;
             document.getElementById('clientId').value = settings.clientId;
             
             document.getElementById('settingsModal').style.display = 'block';
@@ -673,7 +678,7 @@
             // Формируем URL
             let url = path ? `${protocol}${host}:${port}${path}` : `${protocol}${host}:${port}`;
             
-            document.getElementById('status').innerHTML = `🟡 Подключаюсь к ${host}...`;
+            // Обновление статуса больше не требуется
             
             if (client) client.end(true);
             if (reconnectTimer) clearTimeout(reconnectTimer);
@@ -705,13 +710,17 @@
             client = mqtt.connect(url, options);
             
             client.on('connect', function() {
-                document.getElementById('status').innerHTML = `🟢 Подключено к ${host}`;
+                // Обновление статуса больше не требуется
                 
                 client.subscribe(settings.tempTopic, function(err) {
                     if (err) console.log('Subscribe error:', err);
                 });
                 
                 client.subscribe(settings.pumpTopic, function(err) {
+                    if (err) console.log('Subscribe error:', err);
+                });
+                
+                client.subscribe(settings.heaterTopic, function(err) {
                     if (err) console.log('Subscribe error:', err);
                 });
             });
@@ -751,20 +760,41 @@
                         pumpIcon.innerHTML = '⚙️❓';
                     }
                     
-                    document.getElementById('lastPumpUpdate').innerHTML = 
+                    document.getElementById('lastPumpUpdate').innerHTML =
+                        'Последние данные: ' + new Date().toLocaleTimeString();
+                }
+                else if (topic === settings.heaterTopic) {
+                    const heaterIndicator = document.getElementById('heaterIndicator');
+                    const heaterIcon = document.getElementById('heaterIcon');
+                    
+                    if (msg === 'ON') {
+                        heaterIndicator.className = 'pump-indicator pump-on';
+                        heaterIndicator.innerHTML = '🔥 НАГРЕВ ВКЛЮЧЕН';
+                        heaterIcon.innerHTML = '🔥';
+                    } else if (msg === 'OFF') {
+                        heaterIndicator.className = 'pump-indicator pump-off';
+                        heaterIndicator.innerHTML = '❄️ НАГРЕВ ВЫКЛЮЧЕН';
+                        heaterIcon.innerHTML = '🌡️';
+                    } else {
+                        heaterIndicator.className = 'pump-indicator pump-waiting';
+                        heaterIndicator.innerHTML = '❓ ' + msg;
+                        heaterIcon.innerHTML = '❓';
+                    }
+                    
+                    document.getElementById('lastHeaterUpdate').innerHTML =
                         'Последние данные: ' + new Date().toLocaleTimeString();
                 }
             });
             
             client.on('error', function(error) {
                 console.log('MQTT Error:', error);
-                document.getElementById('status').innerHTML = '🔴 Ошибка: ' + error.message;
                 updatePumpUI('ERROR');
+                updateHeaterUI('ERROR');
             });
             
             client.on('offline', function() {
-                document.getElementById('status').innerHTML = '🔴 Отключено';
                 updatePumpUI('OFFLINE');
+                updateHeaterUI('OFFLINE');
             });
             
             client.on('close', function() {
@@ -786,12 +816,30 @@
                 pumpIcon.innerHTML = '⚙️❌';
             }
         }
+        
+        function updateHeaterUI(status) {
+            const heaterIndicator = document.getElementById('heaterIndicator');
+            const heaterIcon = document.getElementById('heaterIcon');
+            
+            if (status === 'OFFLINE') {
+                heaterIndicator.className = 'pump-indicator pump-waiting';
+                heaterIndicator.innerHTML = '📡 НЕТ СВЯЗИ';
+                heaterIcon.innerHTML = '🌡️📡';
+            } else if (status === 'ERROR') {
+                heaterIndicator.className = 'pump-indicator pump-waiting';
+                heaterIndicator.innerHTML = '⚠️ ОШИБКА';
+                heaterIcon.innerHTML = '🌡️❌';
+            }
+        }
 
         // Запуск
         window.onload = loadSettings;
         
         setInterval(() => {
-            if (!client || !client.connected) updatePumpUI('OFFLINE');
+            if (!client || !client.connected) {
+                updatePumpUI('OFFLINE');
+                updateHeaterUI('OFFLINE');
+            }
         }, 5000);
     </script>
 </body>
