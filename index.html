@@ -88,6 +88,18 @@
             box-shadow: 0 0 20px rgba(244, 67, 54, 0.5);
         }
         
+        .heater-on {
+            background: #f44336; /* Красный цвет для включенного нагрева */
+            color: white;
+            box-shadow: 0 0 20px rgba(244, 67, 54, 0.5);
+        }
+        
+        .heater-off {
+            background: #2196F3; /* Синий цвет для выключенного нагрева */
+            color: white;
+            box-shadow: 0 0 20px rgba(33, 150, 243, 0.5);
+        }
+        
         .pump-waiting {
             background: #ff9800;
             color: white;
@@ -427,9 +439,9 @@
         </div>
         
         <div class="pump-status">
-            <div class="pump-title">
+            <!-- <div class="pump-title">
                 <span>🔥 Нагрев воды</span>
-            </div>
+            </div> -->
             <div id="heaterIcon" class="pump-icon">⏳</div>
             <div id="heaterIndicator" class="pump-indicator pump-waiting">
                 Загрузка...
@@ -768,11 +780,11 @@
                     const heaterIcon = document.getElementById('heaterIcon');
                     
                     if (msg === 'ON') {
-                        heaterIndicator.className = 'pump-indicator pump-on';
+                        heaterIndicator.className = 'pump-indicator heater-on';
                         heaterIndicator.innerHTML = '🔥 НАГРЕВ ВКЛЮЧЕН';
                         heaterIcon.innerHTML = '🔥';
                     } else if (msg === 'OFF') {
-                        heaterIndicator.className = 'pump-indicator pump-off';
+                        heaterIndicator.className = 'pump-indicator heater-off';
                         heaterIndicator.innerHTML = '❄️ НАГРЕВ ВЫКЛЮЧЕН';
                         heaterIcon.innerHTML = '🌡️';
                     } else {
@@ -781,8 +793,8 @@
                         heaterIcon.innerHTML = '❓';
                     }
                     
-                    document.getElementById('lastHeaterUpdate').innerHTML =
-                        'Последние данные: ' + new Date().toLocaleTimeString();
+                    //document.getElementById('lastHeaterUpdate').innerHTML =
+                      //  'Последние данные: ' + new Date().toLocaleTimeString();
                 }
             });
             

@@ -3,7 +3,7 @@
     "activeCommit": 0,
     "commits": [
         {
-            "activePatchIndex": 23,
+            "activePatchIndex": 27,
             "patches": [
                 {
                     "date": 1773398289730,
@@ -100,6 +100,22 @@
                 {
                     "date": 1773399715994,
                     "content": "Index: \n===================================================================\n--- \n+++ \n@@ -759,10 +759,10 @@\n                         pumpIndicator.innerHTML = '⏳ ' + msg;\r\n                         pumpIcon.innerHTML = '⚙️❓';\r\n                     }\r\n                     \r\n-                    document.getElementById('lastPumpUpdate').innerHTML =\r\n-                        'Последние данные: ' + new Date().toLocaleTimeString();\r\n+                    // document.getElementById('lastPumpUpdate').innerHTML =\r\n+                    //     'Последние данные: ' + new Date().toLocaleTimeString();\r\n                 }\r\n                 else if (topic === settings.heaterTopic) {\r\n                     const heaterIndicator = document.getElementById('heaterIndicator');\r\n                     const heaterIcon = document.getElementById('heaterIcon');\r\n"
+                },
+                {
+                    "date": 1773402012947,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -87,8 +87,20 @@\n             color: white;\r\n             box-shadow: 0 0 20px rgba(244, 67, 54, 0.5);\r\n         }\r\n         \r\n+        .heater-on {\r\n+            background: #f44336; /* Красный цвет для включенного нагрева */\r\n+            color: white;\r\n+            box-shadow: 0 0 20px rgba(244, 67, 54, 0.5);\r\n+        }\r\n+        \r\n+        .heater-off {\r\n+            background: #2196F3; /* Синий цвет для выключенного нагрева */\r\n+            color: white;\r\n+            box-shadow: 0 0 20px rgba(33, 150, 243, 0.5);\r\n+        }\r\n+        \r\n         .pump-waiting {\r\n             background: #ff9800;\r\n             color: white;\r\n         }\r\n"
+                },
+                {
+                    "date": 1773402020008,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -779,13 +779,13 @@\n                     const heaterIndicator = document.getElementById('heaterIndicator');\r\n                     const heaterIcon = document.getElementById('heaterIcon');\r\n                     \r\n                     if (msg === 'ON') {\r\n-                        heaterIndicator.className = 'pump-indicator pump-on';\r\n+                        heaterIndicator.className = 'pump-indicator heater-on';\r\n                         heaterIndicator.innerHTML = '🔥 НАГРЕВ ВКЛЮЧЕН';\r\n                         heaterIcon.innerHTML = '🔥';\r\n                     } else if (msg === 'OFF') {\r\n-                        heaterIndicator.className = 'pump-indicator pump-off';\r\n+                        heaterIndicator.className = 'pump-indicator heater-off';\r\n                         heaterIndicator.innerHTML = '❄️ НАГРЕВ ВЫКЛЮЧЕН';\r\n                         heaterIcon.innerHTML = '🌡️';\r\n                     } else {\r\n                         heaterIndicator.className = 'pump-indicator pump-waiting';\r\n"
+                },
+                {
+                    "date": 1773402401351,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -438,11 +438,11 @@\n             <div id=\"lastPumpUpdate\"></div>\r\n         </div>\r\n         \r\n         <div class=\"pump-status\">\r\n-            <div class=\"pump-title\">\r\n+            <!-- <div class=\"pump-title\">\r\n                 <span>🔥 Нагрев воды</span>\r\n-            </div>\r\n+            </div> -->\r\n             <div id=\"heaterIcon\" class=\"pump-icon\">⏳</div>\r\n             <div id=\"heaterIndicator\" class=\"pump-indicator pump-waiting\">\r\n                 Загрузка...\r\n             </div>\r\n"
+                },
+                {
+                    "date": 1773402483076,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -792,10 +792,10 @@\n                         heaterIndicator.innerHTML = '❓ ' + msg;\r\n                         heaterIcon.innerHTML = '❓';\r\n                     }\r\n                     \r\n-                    document.getElementById('lastHeaterUpdate').innerHTML =\r\n-                        'Последние данные: ' + new Date().toLocaleTimeString();\r\n+                    //document.getElementById('lastHeaterUpdate').innerHTML =\r\n+                      //  'Последние данные: ' + new Date().toLocaleTimeString();\r\n                 }\r\n             });\r\n             \r\n             client.on('error', function(error) {\r\n"
                 }
             ],
             "date": 1773398289730,
