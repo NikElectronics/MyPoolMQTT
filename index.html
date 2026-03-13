@@ -416,9 +416,9 @@
         <div id="time">---</div>
         
         <div class="pump-status">
-            <div class="pump-title">
+            <!-- <div class="pump-title">
                 <span>⚙️ Насос фильтрации</span>
-            </div>
+            </div> -->
             <div id="pumpIcon" class="pump-icon">⏳</div>
             <div id="pumpIndicator" class="pump-indicator pump-waiting">
                 Загрузка...
@@ -748,11 +748,11 @@
                     
                     if (msg === 'ON') {
                         pumpIndicator.className = 'pump-indicator pump-on';
-                        pumpIndicator.innerHTML = '✅ НАСОС РАБОТАЕТ';
+                        pumpIndicator.innerHTML = '✅ ФИЛЬТРАЦИЯ';
                         pumpIcon.innerHTML = '⚙️💨';
                     } else if (msg === 'OFF') {
                         pumpIndicator.className = 'pump-indicator pump-off';
-                        pumpIndicator.innerHTML = '⏸️ НАСОС ВЫКЛЮЧЕН';
+                        pumpIndicator.innerHTML = '⏸️ НАСОСЫ ВЫКЛЮЧЕНЫ';
                         pumpIcon.innerHTML = '⚙️💤';
                     } else {
                         pumpIndicator.className = 'pump-indicator pump-waiting';
@@ -760,8 +760,8 @@
                         pumpIcon.innerHTML = '⚙️❓';
                     }
                     
-                    document.getElementById('lastPumpUpdate').innerHTML =
-                        'Последние данные: ' + new Date().toLocaleTimeString();
+                    // document.getElementById('lastPumpUpdate').innerHTML =
+                    //     'Последние данные: ' + new Date().toLocaleTimeString();
                 }
                 else if (topic === settings.heaterTopic) {
                     const heaterIndicator = document.getElementById('heaterIndicator');

@@ -3,7 +3,7 @@
     "activeCommit": 0,
     "commits": [
         {
-            "activePatchIndex": 19,
+            "activePatchIndex": 23,
             "patches": [
                 {
                     "date": 1773398289730,
@@ -84,6 +84,22 @@
                 {
                     "date": 1773398856795,
                     "content": "Index: \n===================================================================\n--- \n+++ \n@@ -583,8 +583,12 @@\n             try {\r\n                 const saved = localStorage.getItem('poolSettingsAll');\r\n                 if (saved) {\r\n                     settings = JSON.parse(saved);\r\n+                    // Обеспечиваем наличие всех необходимых параметров\r\n+                    if (!settings.hasOwnProperty('heaterTopic')) {\r\n+                        settings.heaterTopic = DEFAULT_SETTINGS.heaterTopic;\r\n+                    }\r\n                 }\r\n             } catch (e) {\r\n                 console.log('Error loading settings:', e);\r\n             }\r\n"
+                },
+                {
+                    "date": 1773399420227,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -747,9 +747,9 @@\n                     const pumpIcon = document.getElementById('pumpIcon');\r\n                     \r\n                     if (msg === 'ON') {\r\n                         pumpIndicator.className = 'pump-indicator pump-on';\r\n-                        pumpIndicator.innerHTML = '✅ НАСОС РАБОТАЕТ';\r\n+                        pumpIndicator.innerHTML = '✅ ФИЛЬТРАЦИЯ';\r\n                         pumpIcon.innerHTML = '⚙️💨';\r\n                     } else if (msg === 'OFF') {\r\n                         pumpIndicator.className = 'pump-indicator pump-off';\r\n                         pumpIndicator.innerHTML = '⏸️ НАСОС ВЫКЛЮЧЕН';\r\n"
+                },
+                {
+                    "date": 1773399564133,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -751,9 +751,9 @@\n                         pumpIndicator.innerHTML = '✅ ФИЛЬТРАЦИЯ';\r\n                         pumpIcon.innerHTML = '⚙️💨';\r\n                     } else if (msg === 'OFF') {\r\n                         pumpIndicator.className = 'pump-indicator pump-off';\r\n-                        pumpIndicator.innerHTML = '⏸️ НАСОС ВЫКЛЮЧЕН';\r\n+                        pumpIndicator.innerHTML = '⏸️ НАСОСЫ ВЫКЛЮЧЕНЫ';\r\n                         pumpIcon.innerHTML = '⚙️💤';\r\n                     } else {\r\n                         pumpIndicator.className = 'pump-indicator pump-waiting';\r\n                         pumpIndicator.innerHTML = '⏳ ' + msg;\r\n"
+                },
+                {
+                    "date": 1773399674694,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -415,11 +415,11 @@\n         </div>\r\n         <div id=\"time\">---</div>\r\n         \r\n         <div class=\"pump-status\">\r\n-            <div class=\"pump-title\">\r\n+            <!-- <div class=\"pump-title\">\r\n                 <span>⚙️ Насос фильтрации</span>\r\n-            </div>\r\n+            </div> -->\r\n             <div id=\"pumpIcon\" class=\"pump-icon\">⏳</div>\r\n             <div id=\"pumpIndicator\" class=\"pump-indicator pump-waiting\">\r\n                 Загрузка...\r\n             </div>\r\n"
+                },
+                {
+                    "date": 1773399715994,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -759,10 +759,10 @@\n                         pumpIndicator.innerHTML = '⏳ ' + msg;\r\n                         pumpIcon.innerHTML = '⚙️❓';\r\n                     }\r\n                     \r\n-                    document.getElementById('lastPumpUpdate').innerHTML =\r\n-                        'Последние данные: ' + new Date().toLocaleTimeString();\r\n+                    // document.getElementById('lastPumpUpdate').innerHTML =\r\n+                    //     'Последние данные: ' + new Date().toLocaleTimeString();\r\n                 }\r\n                 else if (topic === settings.heaterTopic) {\r\n                     const heaterIndicator = document.getElementById('heaterIndicator');\r\n                     const heaterIcon = document.getElementById('heaterIcon');\r\n"
                 }
             ],
             "date": 1773398289730,
