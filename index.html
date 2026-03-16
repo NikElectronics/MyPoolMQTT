@@ -35,6 +35,16 @@
             border: 1px solid rgba(255, 255, 255, 0.3);
         }
         
+        .section-header {
+            font-size: 16px;
+            font-weight: bold;
+            margin: 15px 0 10px 0;
+            color: #003366;
+            text-align: center;
+            padding-bottom: 8px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.5);
+        }
+        
         .pool-icon {
             font-size: 50px;
             margin-bottom: 10px;
@@ -64,6 +74,15 @@
             border-radius: 15px;
             padding: 15px;
             margin: 15px 0;
+        }
+        
+        .pump-title {
+            font-size: 15px;
+            font-weight: bold;
+            margin: 0 0 10px 0;
+            color: #003366;
+            text-align: center;
+            padding-bottom: 5px;
         }
         
         .pump-indicator {
@@ -422,15 +441,17 @@
         <div class="pool-title">Бассейн ISMAIL</div>
         <div class="pool-subtitle">Мониторинг воды</div>
         
+        <div class="section-header">🌡️ Температура воды</div>
+        
         <div class="temp">
             <span id="tempValue">--</span><span class="unit">°C</span>
         </div>
         <div id="time">---</div>
         
         <div class="pump-status">
-            <!-- <div class="pump-title">
+            <div class="pump-title">
                 <span>⚙️ Насос фильтрации</span>
-            </div> -->
+            </div>
             <div id="pumpIcon" class="pump-icon">⏳</div>
             <div id="pumpIndicator" class="pump-indicator pump-waiting">
                 Загрузка...
@@ -439,14 +460,38 @@
         </div>
         
         <div class="pump-status">
-            <!-- <div class="pump-title">
+            <div class="pump-title">
                 <span>🔥 Нагрев воды</span>
-            </div> -->
+            </div>
             <div id="heaterIcon" class="pump-icon">⏳</div>
             <div id="heaterIndicator" class="pump-indicator pump-waiting">
                 Загрузка...
             </div>
             <div id="lastHeaterUpdate"></div>
+        </div>
+        
+        <!-- Отображение pH -->
+        <div class="pump-status" id="phContainer" style="display:none;">
+            <div class="pump-title">
+                <span>🧪 Уровень pH</span>
+            </div>
+            <div id="phIcon" class="pump-icon">🧪</div>
+            <div id="phIndicator" class="pump-indicator pump-waiting">
+                Загрузка pH...
+            </div>
+            <div id="lastPhUpdate"></div>
+        </div>
+        
+        <!-- Отображение хлора -->
+        <div class="pump-status" id="chlorineContainer" style="display:none;">
+            <div class="pump-title">
+                <span>💧 Уровень хлора</span>
+            </div>
+            <div id="chlorineIcon" class="pump-icon">💧</div>
+            <div id="chlorineIndicator" class="pump-indicator pump-waiting">
+                Загрузка хлора...
+            </div>
+            <div id="lastChlorineUpdate"></div>
         </div>
         
         <button onclick="connectMQTT()">🔄 Переподключиться</button>
@@ -489,6 +534,11 @@
             </div>
             
             <div class="settings-group">
+                <label>🏊‍♂️ Название бассейна:</label>
+                <input type="text" id="poolName" placeholder="например: ISMAIL">
+            </div>
+            
+            <div class="settings-group">
                 <label>📝 Топик температуры:</label>
                 <input type="text" id="tempTopic" placeholder="pool/ismail/temperature">
             </div>
@@ -506,6 +556,20 @@
             <div class="settings-group">
                 <label>🆔 Client ID (опционально):</label>
                 <input type="text" id="clientId" placeholder="будет сгенерирован автоматически">
+            </div>
+            
+            <div class="settings-group">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="showPh"> Показывать уровень pH
+                </label>
+                <input type="text" id="phTopic" placeholder="pool/ismail/ph" style="margin-top: 10px;">
+            </div>
+            
+            <div class="settings-group">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="showChlorine"> Показывать уровень хлора
+                </label>
+                <input type="text" id="chlorineTopic" placeholder="pool/ismail/chlorine" style="margin-top: 10px;">
             </div>
             
             <div class="settings-info">
@@ -536,9 +600,14 @@
             useTls: true,
             mqttUser: '',
             mqttPass: '',
+            poolName: 'ISMAIL',
             tempTopic: 'pool/ismail/temperature',
             pumpTopic: 'pool/ismail/pump',
             heaterTopic: 'pool/ismail/heater',
+            phTopic: 'pool/ismail/ph',
+            chlorineTopic: 'pool/ismail/chlorine',
+            showPh: false,
+            showChlorine: false,
             clientId: ''
         };
         
@@ -600,12 +669,30 @@
                     if (!settings.hasOwnProperty('heaterTopic')) {
                         settings.heaterTopic = DEFAULT_SETTINGS.heaterTopic;
                     }
+                    // Добавляем новые параметры, если они отсутствуют
+                    if (!settings.hasOwnProperty('phTopic')) {
+                        settings.phTopic = DEFAULT_SETTINGS.phTopic;
+                    }
+                    if (!settings.hasOwnProperty('chlorineTopic')) {
+                        settings.chlorineTopic = DEFAULT_SETTINGS.chlorineTopic;
+                    }
+                    if (!settings.hasOwnProperty('showPh')) {
+                        settings.showPh = DEFAULT_SETTINGS.showPh;
+                    }
+                    if (!settings.hasOwnProperty('showChlorine')) {
+                        settings.showChlorine = DEFAULT_SETTINGS.showChlorine;
+                    }
+                    // Добавляем параметр названия бассейна, если отсутствует
+                    if (!settings.hasOwnProperty('poolName')) {
+                        settings.poolName = DEFAULT_SETTINGS.poolName;
+                    }
                 }
             } catch (e) {
                 console.log('Error loading settings:', e);
             }
             
             updateUI();
+            updatePoolTitle(); // Обновляем отображение названия бассейна
             connectMQTT();
         }
 
@@ -629,9 +716,14 @@
                 useTls: document.getElementById('useTls').checked,
                 mqttUser: document.getElementById('mqttUser').value.trim(),
                 mqttPass: document.getElementById('mqttPass').value.trim(),
+                poolName: document.getElementById('poolName').value.trim() || DEFAULT_SETTINGS.poolName,
                 tempTopic: document.getElementById('tempTopic').value.trim() || DEFAULT_SETTINGS.tempTopic,
                 pumpTopic: document.getElementById('pumpTopic').value.trim() || DEFAULT_SETTINGS.pumpTopic,
                 heaterTopic: document.getElementById('heaterTopic').value.trim() || DEFAULT_SETTINGS.heaterTopic,
+                phTopic: document.getElementById('phTopic').value.trim() || DEFAULT_SETTINGS.phTopic,
+                chlorineTopic: document.getElementById('chlorineTopic').value.trim() || DEFAULT_SETTINGS.chlorineTopic,
+                showPh: document.getElementById('showPh').checked,
+                showChlorine: document.getElementById('showChlorine').checked,
                 clientId: document.getElementById('clientId').value.trim() || ''
             };
             
@@ -640,6 +732,7 @@
             
             closeSettings();
             updateUI();
+            updatePoolTitle(); // Обновляем отображение названия бассейна
             connectMQTT();
             
             setTimeout(() => {
@@ -650,6 +743,13 @@
         function updateUI() {
             // Обновление информации о брокере больше не требуется
         }
+        
+        function updatePoolTitle() {
+            const poolTitleElement = document.querySelector('.pool-title');
+            if (poolTitleElement) {
+                poolTitleElement.textContent = `Бассейн ${settings.poolName}`;
+            }
+        }
 
         function openSettings() {
             document.getElementById('brokerHost').value = settings.brokerHost;
@@ -658,9 +758,14 @@
             document.getElementById('useTls').checked = settings.useTls;
             document.getElementById('mqttUser').value = settings.mqttUser;
             document.getElementById('mqttPass').value = settings.mqttPass;
+            document.getElementById('poolName').value = settings.poolName;
             document.getElementById('tempTopic').value = settings.tempTopic;
             document.getElementById('pumpTopic').value = settings.pumpTopic;
             document.getElementById('heaterTopic').value = settings.heaterTopic;
+            document.getElementById('phTopic').value = settings.phTopic;
+            document.getElementById('chlorineTopic').value = settings.chlorineTopic;
+            document.getElementById('showPh').checked = settings.showPh;
+            document.getElementById('showChlorine').checked = settings.showChlorine;
             document.getElementById('clientId').value = settings.clientId;
             
             document.getElementById('settingsModal').style.display = 'block';
@@ -735,6 +840,29 @@
                 client.subscribe(settings.heaterTopic, function(err) {
                     if (err) console.log('Subscribe error:', err);
                 });
+                
+                // Подписываемся на топики pH и хлора, если они включены
+                if (settings.showPh) {
+                    client.subscribe(settings.phTopic, function(err) {
+                        if (err) console.log('Subscribe error:', err);
+                    });
+                    // Показываем контейнер pH
+                    document.getElementById('phContainer').style.display = 'block';
+                } else {
+                    // Скрываем контейнер pH
+                    document.getElementById('phContainer').style.display = 'none';
+                }
+                
+                if (settings.showChlorine) {
+                    client.subscribe(settings.chlorineTopic, function(err) {
+                        if (err) console.log('Subscribe error:', err);
+                    });
+                    // Показываем контейнер хлора
+                    document.getElementById('chlorineContainer').style.display = 'block';
+                } else {
+                    // Скрываем контейнер хлора
+                    document.getElementById('chlorineContainer').style.display = 'none';
+                }
             });
             
             client.on('message', function(topic, message) {
@@ -744,7 +872,7 @@
                     const temp = parseFloat(msg);
                     if (!isNaN(temp)) {
                         document.getElementById('tempValue').innerHTML = temp.toFixed(1);
-                        document.getElementById('time').innerHTML = 
+                        document.getElementById('time').innerHTML =
                             'Обновлено: ' + new Date().toLocaleTimeString();
                         
                         // Меняем фон
@@ -796,17 +924,59 @@
                     //document.getElementById('lastHeaterUpdate').innerHTML =
                       //  'Последние данные: ' + new Date().toLocaleTimeString();
                 }
+                // Обработка топика pH
+                else if (topic === settings.phTopic && settings.showPh) {
+                    const phIndicator = document.getElementById('phIndicator');
+                    const phIcon = document.getElementById('phIcon');
+                    
+                    const phValue = parseFloat(msg);
+                    if (!isNaN(phValue)) {
+                        phIndicator.className = 'pump-indicator pump-waiting'; // Используем тот же стиль, что и другие индикаторы
+                        phIndicator.innerHTML = '🧪 pH: ' + phValue.toFixed(2);
+                        phIcon.innerHTML = '🧪';
+                    } else {
+                        phIndicator.className = 'pump-indicator pump-waiting';
+                        phIndicator.innerHTML = '🧪 pH: ' + msg;
+                        phIcon.innerHTML = '🧪❓';
+                    }
+                    
+                    // document.getElementById('lastPhUpdate').innerHTML =
+                    //     'Последние данные: ' + new Date().toLocaleTimeString();
+                }
+                // Обработка топика хлора
+                else if (topic === settings.chlorineTopic && settings.showChlorine) {
+                    const chlorineIndicator = document.getElementById('chlorineIndicator');
+                    const chlorineIcon = document.getElementById('chlorineIcon');
+                    
+                    const chlorineValue = parseFloat(msg);
+                    if (!isNaN(chlorineValue)) {
+                        chlorineIndicator.className = 'pump-indicator pump-waiting'; // Используем тот же стиль, что и другие индикаторы
+                        chlorineIndicator.innerHTML = '💧 Хлор: ' + chlorineValue.toFixed(2) + ' ppm';
+                        chlorineIcon.innerHTML = '💧';
+                    } else {
+                        chlorineIndicator.className = 'pump-indicator pump-waiting';
+                        chlorineIndicator.innerHTML = '💧 Хлор: ' + msg;
+                        chlorineIcon.innerHTML = '💧❓';
+                    }
+                    
+                    // document.getElementById('lastChlorineUpdate').innerHTML =
+                    //     'Последние данные: ' + new Date().toLocaleTimeString();
+                }
             });
             
             client.on('error', function(error) {
                 console.log('MQTT Error:', error);
                 updatePumpUI('ERROR');
                 updateHeaterUI('ERROR');
+                updatePhUI('ERROR');
+                updateChlorineUI('ERROR');
             });
             
             client.on('offline', function() {
                 updatePumpUI('OFFLINE');
                 updateHeaterUI('OFFLINE');
+                updatePhUI('OFFLINE');
+                updateChlorineUI('OFFLINE');
             });
             
             client.on('close', function() {
@@ -843,6 +1013,40 @@
                 heaterIcon.innerHTML = '🌡️❌';
             }
         }
+        
+        function updatePhUI(status) {
+            if (settings.showPh) {
+                const phIndicator = document.getElementById('phIndicator');
+                const phIcon = document.getElementById('phIcon');
+                
+                if (status === 'OFFLINE') {
+                    phIndicator.className = 'pump-indicator pump-waiting';
+                    phIndicator.innerHTML = '📡 НЕТ СВЯЗИ';
+                    phIcon.innerHTML = '🧪📡';
+                } else if (status === 'ERROR') {
+                    phIndicator.className = 'pump-indicator pump-waiting';
+                    phIndicator.innerHTML = '⚠️ ОШИБКА';
+                    phIcon.innerHTML = '🧪❌';
+                }
+            }
+        }
+        
+        function updateChlorineUI(status) {
+            if (settings.showChlorine) {
+                const chlorineIndicator = document.getElementById('chlorineIndicator');
+                const chlorineIcon = document.getElementById('chlorineIcon');
+                
+                if (status === 'OFFLINE') {
+                    chlorineIndicator.className = 'pump-indicator pump-waiting';
+                    chlorineIndicator.innerHTML = '📡 НЕТ СВЯЗИ';
+                    chlorineIcon.innerHTML = '💧📡';
+                } else if (status === 'ERROR') {
+                    chlorineIndicator.className = 'pump-indicator pump-waiting';
+                    chlorineIndicator.innerHTML = '⚠️ ОШИБКА';
+                    chlorineIcon.innerHTML = '💧❌';
+                }
+            }
+        }
 
         // Запуск
         window.onload = loadSettings;
@@ -851,6 +1055,8 @@
             if (!client || !client.connected) {
                 updatePumpUI('OFFLINE');
                 updateHeaterUI('OFFLINE');
+                updatePhUI('OFFLINE');
+                updateChlorineUI('OFFLINE');
             }
         }, 5000);
     </script>
